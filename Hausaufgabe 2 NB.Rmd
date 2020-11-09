@@ -1,0 +1,226 @@
+---
+title: "Hausaufgabe 2 Nachbearbeitung"
+author: "Florian-Maximilian Paul"
+date: "9 11 2020"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+BX_Book_Ratings <- read_delim("BX-Book-Ratings.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+BX_Books <- read_delim("BX-Books.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+BX_Users <- read_delim("BX-Users.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+```
+
+
+# Aufgabe 1
+# Ich lege mir RatingBeziehung an und möchte eine Auflistung mit allen Publishern und deren Bewertungen insgesamt erhalten 
+```{r}
+RatingBeziehung <- BX_Book_Ratings%>%
+  left_join(BX_Books)%>%
+  select(Publisher,`Book-Rating`)%>%
+  filter(!is.na(Publisher))%>%
+  group_by(Publisher)
+  
+  
+```
+
+```{r}
+RatingBeziehung
+```
+
+#Jetzt grupiere ich via group und zähle via Count die einzelenen Bewertungen zusammen
+
+```{r}
+RatingBeziehung <- BX_Book_Ratings%>%
+  left_join(BX_Books)%>%
+  select(Publisher,`Book-Rating`)%>%
+  filter(!is.na(Publisher))%>%
+  group_by(Publisher)%>%
+  summarise(Bewertungen = n())%>%
+  arrange(desc(Bewertungen))
+
+  
+  
+```
+```{r}
+RatingBeziehung
+```
+
+# Ich bin mir ehrlich gesagt nicht sicher ob das Sinnvoll ist , weil nach meinem Verständniss wird eine Wertung von 0 ja quasi ignoriert da das programm ja summiert ?
+# Ich bin aber nach ewigem herumprobieren leider auf keine andere Lösung gekommen und hoffe, das dass nicht alzu viel Punktabzug gibt .
+
+# Jetzt habe ich die Anzahl der Bewertungen pro Publisher , jetzt benötige ich noch die Anzahl der Bücher pro Publisher
+
+```{r}
+BooksBeziehung <- BX_Books%>%
+  select(Publisher,`Book-Title`)%>%
+  filter(!is.na(Publisher))
+```
+
+```{r}
+BooksBeziehung <- BooksBeziehung%>%
+  filter(!is.na(`Book-Title`))%>%
+  group_by(Publisher)%>%
+  summarise(Bücher = n ())%>%
+  arrange(desc(Bücher))
+```
+# Nun habe ich quasi beide Werte und muss sie in einen Frame zusammenfügen
+
+```{r}
+Auswertung <- BooksBeziehung%>%
+  left_join(RatingBeziehung)%>%
+  select(Bücher,Bewertungen)
+  
+  
+  
+```
+```{r}
+Auswertung
+```
+ 
+# Nach ewigem probieren hat das auch geklappt und jetzt müsste ich die Auswertung plotten und linear regressiv analysieren können.
+
+
+```{r}
+summary(Auswertung)
+```
+
+
+```{r}
+plot(Auswertung)
+```
+```{r}
+fit <-lm(Auswertung$Bewertungen ~ Auswertung$Bücher)
+
+```
+```{r}
+plot(Auswertung)
+abline(fit)
+
+```
+
+# Damit hoffe ich Aufgabe 1 erledigt zu haben .
+
+## Aufgabe 2
+
+#Haben ältere Bücher mehr Ratings, weil sie mehr Zeit haben, um Ratings zu sammeln?
+
+#Da ich nach Tagen des rumprobierens absolut keine Idee habe wie ich das via linear Regression lösen kann folgt hier eine sehr unpräzise und vermutlich falsche Idee
+```{r}
+Test <- BX_Book_Ratings%>%
+  select(`Book-Rating`,ISBN,)
+
+```
+
+```{r}
+Test <- Test%>%
+  group_by(ISBN)%>%
+  count(ISBN)%>%
+  arrange(desc(n))
+  
+```
+#Ich zähle die Ratings pro ISBN zusammen und habe damit den wert n
+```{r}
+Test
+
+```
+
+```{r}
+Idee <- BX_Books%>%
+  select(ISBN,`Year-Of-Publication`)
+```
+
+```{r}
+
+
+Ergebniss <-Idee%>%
+  left_join(Test)
+
+```
+# Mein Gedanke ist : Wenn die These : Ältere Bücher haben mehr ratings weil sie mehr zeit haben stimmt, dann müsste der wert n bei büchern mit einem sehr frühen Erscheinungsjahr hoch sein.
+```{r}
+Ergebniss <- Ergebniss%>%
+  filter(`Year-Of-Publication`!=0)%>%
+  arrange(`Year-Of-Publication`)
+  
+  
+  
+```
+
+
+# Wenn man sich die folgende Auflistung aber ansieht dann stellt man auch auf weiter folgenden Seiten fest, dass der Wert n auch bei früh erschienen Werken relativ niedrig und in der Nähe von 1 liegt.
+
+```{r}
+Ergebniss
+```
+# Es tut mir leid das ich das als Lösung für Aufgabe Teil 2 präsentieren muss , aber mir viel beim besten willen keine andere möglichkeit ein überhaupt irgendwie auf die Fragestellung zu antworten .
+
+## Nachbearbeitung Aufgabe 2
+# Als erstes Lege ich einen Frame mit den nötigen Variablen an.
+```{r}
+test <- BX_Books%>%
+  left_join(BX_Book_Ratings)%>%
+  select(`Year-Of-Publication`,`Book-Title`,`Book-Rating`)
+
+```
+```{r}
+test
+```
+
+# Jetzt versuche ich die Daten zu bereinigen.
+
+```{r}
+test<- test%>%
+  filter(`Year-Of-Publication`<2005)%>%
+  filter(`Year-Of-Publication`>1990)%>%
+  filter(`Book-Rating`>0)
+```
+# In der Filterung versuche ich den Hinweis zum Entstehungsdatum der Daten mit einzubauen.
+
+```{r}
+test <-test %>%
+  group_by(`Book-Title`) %>%
+  mutate(Bewertungen = n()) %>%
+  ungroup() %>%
+  mutate(Alter = 2005-`Year-Of-Publication`) 
+```
+
+
+```{r}
+test <-test%>%
+  unique()
+```
+
+```{r}
+test <- test%>%
+  select(Bewertungen,Alter)
+
+```
+# Jetzt habe ich einen Frame mit 2 Werten den ich theoretisch plotten könnte.
+```{r}
+test
+```
+# Naja
+```{r}
+plot(test)
+  
+```
+```{r}
+lin <- lm(test$Bewertungen ~ test$Alter)
+```
+```{r}
+summary(lin)
+```
+# Da mich das alles nicht wirklich weiter führt, probiere ich es jetzt mit dem Bereits im Skript präsentierten /erwähnten Logarithmus 
+
+```{r}
+boxplot(log(test$Bewertungen) ~ test$Alter)
+```
+# Wenn ich dies Diagramm nun richtig interpretiere, dann geht daraus Hervor, dass die Aussage Ältere Bücher = Mehr Bewertung wie bereits vermutet nicht zutreffend ist. Viel mehr ist meiner Ansicht zu erkennen, dass die Polstellen ( Ganz alt und Ganz Jung) verhältnismäßig wenig Bewertungen haben und die "Mittelschicht" den großteil der Bewertungen verzeichnet. Das könnte theoretisch dahingehen Sinn machen wenn wir von einem Buchclub ausgehen , die ganz alten bücher liest kaum jemand und die ganz neuen Bücher hat noch nicht jeder bzw, haben noch nicht alle gelesen um sie zu bewerten .
